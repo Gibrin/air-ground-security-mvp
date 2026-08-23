@@ -1,0 +1,26 @@
+# Build artifacts
+build/
+devel/
+install/
+log/
+
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+*.tmp
+*.bak
