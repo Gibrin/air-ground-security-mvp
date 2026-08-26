@@ -32,12 +32,13 @@ class DroneController:
         # Текущее состояние FSM
         self.state = self.STATE_IDLE
         
-        # Параметры
-        self.target_altitude = rospy.get_param('~target_altitude', 10.0)
-        self.intercept_distance = rospy.get_param('~intercept_distance', 2.0)
-        self.altitude_tolerance = rospy.get_param('~altitude_tolerance', 0.5)
-        self.landing_tolerance = rospy.get_param('~landing_tolerance', 0.1)
-        self.critical_battery = rospy.get_param('~critical_battery', 10.0)
+        # Параметры (с принудительным приведением типов)
+        # Защита от строк из launch-файла: float(...) гарантирует число
+        self.target_altitude = float(rospy.get_param('~target_altitude', 10.0))
+        self.intercept_distance = float(rospy.get_param('~intercept_distance', 2.0))
+        self.altitude_tolerance = float(rospy.get_param('~altitude_tolerance', 0.5))
+        self.landing_tolerance = float(rospy.get_param('~landing_tolerance', 0.1))
+        self.critical_battery = float(rospy.get_param('~critical_battery', 10.0))
         
         # Текущие данные
         self.current_position = Point(0.0, 0.0, 0.0)
@@ -158,10 +159,10 @@ class DroneController:
     def battery_callback(self, msg):
         """Мониторинг батареи и аварийная посадка при низком заряде."""
         if hasattr(msg, 'percentage') and msg.percentage is not None:
-            self.battery_level = msg.percentage * 100.0
+            self.battery_level = float(msg.percentage) * 100.0
         elif hasattr(msg, 'voltage') and msg.voltage > 0:
             # Приблизительный расчёт для LiPo (пример)
-            self.battery_level = min(100.0, (msg.voltage / 16.8) * 100.0)
+            self.battery_level = min(100.0, (float(msg.voltage) / 16.8) * 100.0)
             
         # Аварийная посадка при критическом заряде
         if (self.battery_level < self.critical_battery and 
