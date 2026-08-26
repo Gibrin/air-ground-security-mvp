@@ -1,0 +1,87 @@
+# ============================================================
+# 99-robot.rules
+# Udev-правила для устройств проекта Air-Ground Security MVP
+# ============================================================
+#
+# Установка:
+#   sudo cp udev/99-robot.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+#   sudo udevadm trigger
+#
+# Проверка:
+#   udevadm info -a -n /dev/ttyACM0 | grep -E "idVendor|idProduct"
+#   ls -la /dev/ | grep -E "pixhawk|robot|camera|joystick"
+#
+
+# ------------------------------------------------------------
+# ПОСЛЕДОВАТЕЛЬНЫЕ УСТРОЙСТВА (дрон, контроллеры)
+# ------------------------------------------------------------
+
+# Pixhawk / Flight Controller (3DR / Holybro / CUAV)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="26ac", ATTRS{idProduct}=="0011", MODE="0666", GROUP="dialout", SYMLINK+="pixhawk"
+
+# Pixhawk в режиме загрузчика
+SUBSYSTEM=="tty", ATTRS{idVendor}=="26ac", ATTRS{idProduct}=="0010", MODE="0666", GROUP="dialout", SYMLINK+="pixhawk_boot"
+
+# Holybro Pixhawk 4 / 6
+SUBSYSTEM=="tty", ATTRS{idVendor}=="3162", ATTRS{idProduct}=="0045", MODE="0666", GROUP="dialout", SYMLINK+="pixhawk_holybro"
+
+# CP210x USB-UART адаптер (STM32, Arduino, ESP32)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0666", GROUP="dialout", SYMLINK+="ttyUSB_robot"
+
+# FTDI FT232 USB-UART адаптер
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", MODE="0666", GROUP="dialout", SYMLINK+="ttyFTDI_robot"
+
+# STM32 Virtual COM Port
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740", MODE="0666", GROUP="dialout", SYMLINK+="ttySTM32_robot"
+
+# ------------------------------------------------------------
+# КАМЕРЫ
+# ------------------------------------------------------------
+
+# Все видео-устройства
+SUBSYSTEM=="video4linux", KERNEL=="video[0-9]*", MODE="0666", GROUP="video"
+
+# Веб-камера ноутбука (встроенная)
+SUBSYSTEM=="video4linux", ATTRS{idVendor}=="04f2", MODE="0666", GROUP="video", SYMLINK+="camera_builtin"
+
+# USB-камера Logitech
+SUBSYSTEM=="video4linux", ATTRS{idVendor}=="046d", MODE="0666", GROUP="video", SYMLINK+="camera_usb"
+
+# ------------------------------------------------------------
+# ДЖОЙСТИКИ И ГЕЙМПАДЫ
+# ------------------------------------------------------------
+
+# Все джойстики
+SUBSYSTEM=="input", KERNEL=="js[0-9]*", MODE="0666", GROUP="input"
+
+# Все event-устройства ввода (для геймпадов)
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{name}=="*Gamepad*", MODE="0666", GROUP="input"
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{name}=="*Joystick*", MODE="0666", GROUP="input"
+
+# ------------------------------------------------------------
+# CAN-УСТРОЙСТВА (контроллеры двигателей ODrive, VESC)
+# ------------------------------------------------------------
+
+# CAN-интерфейсы
+SUBSYSTEM=="net", KERNEL=="can[0-9]*", MODE="0666", GROUP="plugdev"
+
+# USB-CAN адаптеры (Peak Systems PCAN)
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0c72", MODE="0666", GROUP="plugdev"
+
+# ------------------------------------------------------------
+# БАТАРЕЯ (мониторинг заряда)
+# ------------------------------------------------------------
+
+# Системная батарея ноутбука
+SUBSYSTEM=="power_supply", KERNEL=="BAT*", MODE="0644", GROUP="plugdev"
+
+# ------------------------------------------------------------
+# LIDAR (Velodyne, RPLIDAR, Slamtec)
+# ------------------------------------------------------------
+
+# RPLIDAR / Slamtec по USB
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="*", MODE="0666", GROUP="dialout", SYMLINK+="rplidar"
+
+# Slamtec RPLIDAR A1/A2/A3
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0666", GROUP="dialout", SYMLINK+="lidar"
