@@ -2,7 +2,7 @@
 
 import rospy
 import math
-from std_msgs.msg import String, Bool, Empty
+from std_msgs.msg import String, Bool
 from geometry_msgs.msg import Point
 
 
@@ -10,14 +10,14 @@ class IntruderSimulator:
     """
     Симулятор движения чужого БПЛА для Фазы 1 (MVP).
     
-    Назначение:
-    - Визуализация движущегося нарушителя в rviz
-    - Тестирование алгоритма перехвата (дрон догоняет движущуюся цель)
-    - Различные сценарии вторжения: линейный, круговой, зависание
+    ВАЖНО (версия 1.1): этот узел является ЕДИНСТВЕННЫМ источником
+    позиции нарушителя (/intruder/position) и флага обнаружения
+    (/intruder/detected), когда он активен. Он НЕ триггерит
+    intruder_detector, чтобы избежать конфликта двух издателей.
     
     Публикует:
     - /intruder/position (Point) — текущая позиция чужого БПЛА
-    - /intruder/detected (Bool) — флаг обнаружения (при авто-триггере)
+    - /intruder/detected (Bool) — флаг обнаружения
     
     Подписывается:
     - /intruder_simulator/command (String) — команды: start, stop
@@ -58,9 +58,6 @@ class IntruderSimulator:
         self.center_x = rospy.get_param('~center_x', 0.0)
         self.center_y = rospy.get_param('~center_y', 0.0)
         
-        # Авто-триггер детектора
-        self.auto_trigger = rospy.get_param('~auto_trigger_detector', True)
-        
         # Состояние симуляции
         self.active = False
         self.current_pos = Point(0.0, 0.0, 0.0)
@@ -73,9 +70,6 @@ class IntruderSimulator:
         )
         self.detected_pub = rospy.Publisher(
             '/intruder/detected', Bool, queue_size=10, latch=True
-        )
-        self.trigger_pub = rospy.Publisher(
-            '/intruder_detector/trigger', Empty, queue_size=1
         )
         
         # Subscriber'ы
@@ -120,15 +114,12 @@ class IntruderSimulator:
             self.current_pos.x, self.current_pos.y, self.current_pos.z
         )
         
-        # Публикуем флаг обнаружения
+        # ВАЖНО: сначала публикуем позицию, потом флаг обнаружения,
+        # чтобы дрон не получил пустую позицию (0,0,0) при переходе.
+        self.position_pub.publish(self.current_pos)
+        rospy.sleep(0.2)  # даём подписчикам получить позицию
         self.detected_pub.publish(Bool(data=True))
         
-        # Триггерим детектор если включено
-        if self.auto_trigger:
-            rospy.sleep(0.1)
-            self.trigger_pub.publish(Empty())
-            rospy.loginfo('Auto-triggered intruder detector')
-            
     def stop_simulation(self):
         """Остановка симуляции."""
         if not self.active:
@@ -163,18 +154,17 @@ class IntruderSimulator:
         
         total_distance = math.sqrt(dx**2 + dy**2 + dz**2)
         if total_distance < 0.01:
-            rospy.loginfo('Intruder reached target. Stopping simulation')
-            self.stop_simulation()
             return
             
         step = self.speed * dt
         self.linear_progress += step
         
         if self.linear_progress >= total_distance:
+            # Достигли цели — остаёмся на месте (зависаем),
+            # чтобы дрон мог завершить перехват
             self.current_pos = Point(
                 self.target_pos.x, self.target_pos.y, self.target_pos.z
             )
-            rospy.loginfo('Intruder reached target position')
         else:
             t = self.linear_progress / total_distance
             self.current_pos = Point(

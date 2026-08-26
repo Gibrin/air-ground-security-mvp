@@ -60,67 +60,58 @@
   <param name="mission_type" value="air_space_control"/>
 
   <!-- ============================================================ -->
-  <!-- ПАРАМЕТРЫ ДЛЯ УЗЛОВ                                           -->
+  <!-- ПАРАМЕТРЫ ДЛЯ УЗЛОВ (через <param>, НЕ <rosparam>)            -->
+  <!-- В ROS 1 $(arg ...) не раскрывается внутри <rosparam> блоков! -->
   <!-- ============================================================ -->
 
   <!-- Параметры drone_simulator -->
-  <rosparam ns="drone_simulator">
-    max_speed: $(arg drone_max_speed)
-    update_rate: 20.0
-    position_tolerance: 0.1
-    start_x: 0.0
-    start_y: 0.0
-    start_z: 0.0
-  </rosparam>
+  <param name="drone_simulator/max_speed" value="$(arg drone_max_speed)" type="double"/>
+  <param name="drone_simulator/update_rate" value="20.0" type="double"/>
+  <param name="drone_simulator/position_tolerance" value="0.1" type="double"/>
+  <param name="drone_simulator/start_x" value="0.0" type="double"/>
+  <param name="drone_simulator/start_y" value="0.0" type="double"/>
+  <param name="drone_simulator/start_z" value="0.0" type="double"/>
 
   <!-- Параметры drone_controller -->
-  <rosparam ns="drone_controller">
-    target_altitude: $(arg target_altitude)
-    intercept_distance: $(arg intercept_distance)
-    altitude_tolerance: 0.5
-    landing_tolerance: 0.1
-    critical_battery: $(arg critical_battery_level)
-  </rosparam>
+  <param name="drone_controller/target_altitude" value="$(arg target_altitude)" type="double"/>
+  <param name="drone_controller/intercept_distance" value="$(arg intercept_distance)" type="double"/>
+  <param name="drone_controller/altitude_tolerance" value="0.5" type="double"/>
+  <param name="drone_controller/landing_tolerance" value="0.1" type="double"/>
+  <param name="drone_controller/critical_battery" value="$(arg critical_battery_level)" type="double"/>
 
   <!-- Параметры air_patrol_planner -->
-  <rosparam ns="air_patrol_planner">
-    patrol_radius: $(arg patrol_radius)
-    patrol_altitude: $(arg patrol_altitude)
-    num_waypoints: $(arg num_waypoints)
-    waypoint_tolerance: 3.0
-    center_x: 0.0
-    center_y: 0.0
-  </rosparam>
+  <param name="air_patrol_planner/patrol_radius" value="$(arg patrol_radius)" type="double"/>
+  <param name="air_patrol_planner/patrol_altitude" value="$(arg patrol_altitude)" type="double"/>
+  <param name="air_patrol_planner/num_waypoints" value="$(arg num_waypoints)" type="int"/>
+  <param name="air_patrol_planner/waypoint_tolerance" value="3.0" type="double"/>
+  <param name="air_patrol_planner/center_x" value="0.0" type="double"/>
+  <param name="air_patrol_planner/center_y" value="0.0" type="double"/>
 
   <!-- Параметры intruder_detector -->
-  <rosparam ns="intruder_detector">
-    simulation_enabled: $(arg auto_detect_intruder)
-    detection_probability: 0.1
-    check_interval: 2.0
-    intruder_radius_min: 30.0
-    intruder_radius_max: 70.0
-    intruder_altitude_min: 5.0
-    intruder_altitude_max: 20.0
-    center_x: 0.0
-    center_y: 0.0
-    alert_duration: 2.0
-  </rosparam>
+  <param name="intruder_detector/simulation_enabled" value="$(arg auto_detect_intruder)" type="bool"/>
+  <param name="intruder_detector/detection_probability" value="0.1" type="double"/>
+  <param name="intruder_detector/check_interval" value="2.0" type="double"/>
+  <param name="intruder_detector/intruder_radius_min" value="30.0" type="double"/>
+  <param name="intruder_detector/intruder_radius_max" value="70.0" type="double"/>
+  <param name="intruder_detector/intruder_altitude_min" value="5.0" type="double"/>
+  <param name="intruder_detector/intruder_altitude_max" value="20.0" type="double"/>
+  <param name="intruder_detector/center_x" value="0.0" type="double"/>
+  <param name="intruder_detector/center_y" value="0.0" type="double"/>
+  <param name="intruder_detector/alert_duration" value="2.0" type="double"/>
 
   <!-- Параметры intruder_simulator -->
-  <rosparam ns="intruder_simulator">
-    behavior: $(arg intruder_behavior)
-    speed: 5.0
-    update_rate: 10.0
-    start_x: 100.0
-    start_y: 0.0
-    start_z: 15.0
-    target_x: 0.0
-    target_y: 0.0
-    target_z: 15.0
-    circle_radius: 40.0
-    circle_altitude: 15.0
-    auto_trigger_detector: true
-  </rosparam>
+  <param name="intruder_simulator/behavior" value="$(arg intruder_behavior)" type="str"/>
+  <param name="intruder_simulator/speed" value="5.0" type="double"/>
+  <param name="intruder_simulator/update_rate" value="10.0" type="double"/>
+  <param name="intruder_simulator/start_x" value="100.0" type="double"/>
+  <param name="intruder_simulator/start_y" value="0.0" type="double"/>
+  <param name="intruder_simulator/start_z" value="15.0" type="double"/>
+  <param name="intruder_simulator/target_x" value="0.0" type="double"/>
+  <param name="intruder_simulator/target_y" value="0.0" type="double"/>
+  <param name="intruder_simulator/target_z" value="15.0" type="double"/>
+  <param name="intruder_simulator/circle_radius" value="40.0" type="double"/>
+  <param name="intruder_simulator/circle_altitude" value="15.0" type="double"/>
+  <param name="intruder_simulator/auto_trigger_detector" value="true" type="bool"/>
 
   <!-- ============================================================ -->
   <!-- УЗЛЫ СИМУЛЯЦИИ (ФАЗА 1)                                       -->
@@ -179,24 +170,6 @@
         output="screen"
         respawn="false"
         if="$(arg enable_battery_monitor)"/>
-
-  <!-- Симулятор PIR-датчика (для Фазы 2, пока закомментирован) -->
-  <!--
-  <node name="pir_simulator_node"
-        pkg="air_ground_bringup"
-        type="pir_simulator_node.py"
-        output="screen"
-        respawn="false"/>
-  -->
-
-  <!-- Узел уведомлений в Telegram (заглушка Фазы 1) -->
-  <!--
-  <node name="telegram_alert_node"
-        pkg="air_ground_bringup"
-        type="telegram_alert_node.py"
-        output="screen"
-        respawn="false"/>
-  -->
 
   <!-- ============================================================ -->
   <!-- ВИЗУАЛИЗАЦИЯ (по параметру, требуется по заданию)             -->

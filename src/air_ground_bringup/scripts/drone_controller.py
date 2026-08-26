@@ -15,8 +15,10 @@ class DroneController:
     - IDLE: дрон на базе, заряжается
     - TAKEOFF: взлёт на рабочую высоту
     - AIR_PATROL: воздушное патрулирование зоны
-    - INTERCEPT: перехват чужого БПЛА
+    - INTERCEPT: перехват чужого БПЛА (постоянное преследование)
     - LAND: посадка на базу
+    
+    Версия: 1.2 (исправлена гонка позиций и конфликт издателей)
     """
     
     # Константы состояний
@@ -32,19 +34,25 @@ class DroneController:
         # Текущее состояние FSM
         self.state = self.STATE_IDLE
         
-        # Параметры (с принудительным приведением типов)
-        # Защита от строк из launch-файла: float(...) гарантирует число
-        self.target_altitude = float(rospy.get_param('~target_altitude', 10.0))
-        self.intercept_distance = float(rospy.get_param('~intercept_distance', 2.0))
-        self.altitude_tolerance = float(rospy.get_param('~altitude_tolerance', 0.5))
-        self.landing_tolerance = float(rospy.get_param('~landing_tolerance', 0.1))
-        self.critical_battery = float(rospy.get_param('~critical_battery', 10.0))
+        # Параметры
+        self.target_altitude = rospy.get_param('~target_altitude', 10.0)
+        self.intercept_distance = rospy.get_param('~intercept_distance', 2.0)
+        self.altitude_tolerance = rospy.get_param('~altitude_tolerance', 0.5)
+        self.landing_tolerance = rospy.get_param('~landing_tolerance', 0.1)
+        self.critical_battery = rospy.get_param('~critical_battery', 10.0)
+        self.intercept_timeout = rospy.get_param('~intercept_timeout', 30.0)
+        self.setpoint_update_rate = rospy.get_param('~setpoint_update_rate', 10.0)
         
         # Текущие данные
         self.current_position = Point(0.0, 0.0, 0.0)
         self.intruder_position = Point(0.0, 0.0, 0.0)
         self.intruder_detected = False
+        self.intruder_pos_received = False  # защита от гонки (0,0,0)
         self.battery_level = 100.0
+        
+        # Время начала перехвата (для таймаута)
+        self.intercept_start_time = None
+        self.last_intruder_position = Point(0.0, 0.0, 0.0)
         
         # Publisher'ы
         self.state_pub = rospy.Publisher('/drone/state', String, queue_size=10)
@@ -67,7 +75,7 @@ class DroneController:
             '/battery_state', BatteryState, self.battery_callback
         )
         
-        self.rate = rospy.Rate(10)  # 10 Hz
+        self.rate = rospy.Rate(self.setpoint_update_rate)
         rospy.loginfo('Drone Controller initialized. State: %s', self.state)
         
     def command_callback(self, msg):
@@ -107,23 +115,38 @@ class DroneController:
             
     def intruder_callback(self, msg):
         """Обработка сигнала об обнаружении чужого БПЛА."""
+        was_detected = self.intruder_detected
         self.intruder_detected = msg.data
         
+        # Переход в INTERCEPT при обнаружении
         if msg.data and self.state == self.STATE_AIR_PATROL:
             rospy.logwarn('INTRUDER DETECTED! Transitioning to INTERCEPT')
             self.transition_to(self.STATE_INTERCEPT)
-            # Летим к позиции нарушителя
-            self.setpoint_pub.publish(self.intruder_position)
-            rospy.loginfo(
-                'Intercepting target at (%.1f, %.1f, %.1f)',
-                self.intruder_position.x,
-                self.intruder_position.y,
-                self.intruder_position.z
-            )
+            self.intercept_start_time = rospy.Time.now()
+            # Запоминаем позицию только если она уже получена
+            if self.intruder_pos_received:
+                self.last_intruder_position = self.intruder_position
+                rospy.loginfo(
+                    'Intercepting target at (%.1f, %.1f, %.1f)',
+                    self.intruder_position.x,
+                    self.intruder_position.y,
+                    self.intruder_position.z
+                )
+            else:
+                rospy.loginfo('Waiting for intruder position...')
+            
+        # Потеря цели — продолжаем лететь к последней известной позиции
+        elif was_detected and not msg.data and self.state == self.STATE_INTERCEPT:
+            rospy.logwarn('Intruder signal lost. Continuing to last known position')
+            if self.intruder_pos_received:
+                self.setpoint_pub.publish(self.last_intruder_position)
             
     def intruder_pos_callback(self, msg):
         """Обновление позиции нарушителя."""
         self.intruder_position = msg
+        self.intruder_pos_received = True
+        if self.intruder_detected:
+            self.last_intruder_position = msg
         
     def position_callback(self, msg):
         """Обновление текущей позиции и проверка переходов FSM."""
@@ -146,31 +169,42 @@ class DroneController:
                 
         # Переход: INTERCEPT -> AIR_PATROL (цель достигнута)
         elif self.state == self.STATE_INTERCEPT:
-            distance = self.calculate_distance(
-                self.current_position, self.intruder_position
-            )
+            target = self.last_intruder_position
+            distance = self.calculate_distance(self.current_position, target)
+            
             if distance < self.intercept_distance:
                 rospy.loginfo(
                     'Intercept successful (distance: %.2f m). Returning to AIR_PATROL',
                     distance
                 )
                 self.transition_to(self.STATE_AIR_PATROL)
+                self.intercept_start_time = None
+                
+            # Таймаут перехвата: если цель потеряна и не догнали за timeout
+            elif (not self.intruder_detected and 
+                  self.intercept_start_time is not None):
+                elapsed = (rospy.Time.now() - self.intercept_start_time).to_sec()
+                if elapsed > self.intercept_timeout:
+                    rospy.logwarn(
+                        'Intercept timeout (%.1fs). Target lost, returning to AIR_PATROL',
+                        elapsed
+                    )
+                    self.transition_to(self.STATE_AIR_PATROL)
+                    self.intercept_start_time = None
                 
     def battery_callback(self, msg):
         """Мониторинг батареи и аварийная посадка при низком заряде."""
         if hasattr(msg, 'percentage') and msg.percentage is not None:
-            self.battery_level = float(msg.percentage) * 100.0
+            self.battery_level = msg.percentage * 100.0
         elif hasattr(msg, 'voltage') and msg.voltage > 0:
-            # Приблизительный расчёт для LiPo (пример)
-            self.battery_level = min(100.0, (float(msg.voltage) / 16.8) * 100.0)
+            self.battery_level = min(100.0, (msg.voltage / 16.8) * 100.0)
             
         # Аварийная посадка при критическом заряде
         if (self.battery_level < self.critical_battery and 
             self.state not in [self.STATE_LAND, self.STATE_IDLE]):
             rospy.logerr(
                 'CRITICAL: Battery level %.1f%% < %.1f%%. EMERGENCY LANDING!',
-                self.battery_level,
-                self.critical_battery
+                self.battery_level, self.critical_battery
             )
             self.transition_to(self.STATE_LAND)
             self.setpoint_pub.publish(Point(
@@ -196,6 +230,14 @@ class DroneController:
     def run(self):
         """Главный цикл узла."""
         while not rospy.is_shutdown():
+            # Постоянное обновление setpoint при INTERCEPT (pursuit guidance).
+            # Публикуем только если позиция нарушителя уже получена,
+            # чтобы избежать полёта в (0,0,0) из-за гонки.
+            if (self.state == self.STATE_INTERCEPT and 
+                self.intruder_detected and 
+                self.intruder_pos_received):
+                self.setpoint_pub.publish(self.intruder_position)
+            
             # Публикуем текущее состояние
             self.state_pub.publish(String(data=self.state))
             self.rate.sleep()
