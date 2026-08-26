@@ -24,3 +24,16 @@ Thumbs.db
 # Temporary
 *.tmp
 *.bak
+
+# ROS workspace служебные файлы
+.catkin_workspace
+src/CMakeLists.txt
+
+# Артефакты сборки
+build/
+devel/
+install/
+
+# Python кэш
+*.pyc
+__pycache__/

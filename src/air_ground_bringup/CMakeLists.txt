@@ -1,22 +1,14 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.5)
 project(air_ground_bringup)
 
 ## ============================================================
 ## Поиск зависимостей через catkin
 ## ============================================================
-find_package(catkin REQUIRED COMPONENTS
-  rospy
-  roslaunch
-  std_msgs
-  geometry_msgs
-  sensor_msgs
-  nav_msgs
-  diagnostic_msgs
-  tf2
-  tf2_ros
-  joy
-  mavros
-)
+## Для Python-пакета достаточно только базового catkin.
+## Все зависимости времени выполнения (rospy, std_msgs, joy,
+## mavros и т.д.) указаны в package.xml как <exec_depend>.
+## ============================================================
+find_package(catkin REQUIRED)
 
 ## ============================================================
 ## Объявление пакета (без C++ библиотек, только Python-узлы)
@@ -30,6 +22,9 @@ catkin_package()
 ## в ${CATKIN_PACKAGE_BIN_DESTINATION} и станут доступны через
 ## 'rosrun air_ground_bringup <имя_узла>'
 ## ============================================================
+## ВАЖНО: telegram_alert_node.py не создан, поэтому не указан.
+## Когда узел будет создан (Фаза 2), добавьте его в этот список.
+## ============================================================
 catkin_install_python(PROGRAMS
   scripts/battery_node.py
   scripts/pir_simulator_node.py
@@ -38,7 +33,6 @@ catkin_install_python(PROGRAMS
   scripts/air_patrol_planner.py
   scripts/intruder_detector.py
   scripts/intruder_simulator.py
-  scripts/telegram_alert_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -72,13 +66,6 @@ install(DIRECTORY docs/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/docs
   OPTIONAL
 )
-
-## ============================================================
-## Установка дополнительных файлов (udev-правила, скрипты)
-## ============================================================
-## Если в будущем появятся дополнительные файлы конфигурации,
-## добавьте их сюда
-## ============================================================
 
 ## ============================================================
 ## Тесты (опционально, для будущей фазы)
