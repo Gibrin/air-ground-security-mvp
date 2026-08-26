@@ -1,0 +1,102 @@
+<?xml version="1.0"?>
+<package format="2">
+  <!-- ============================================================ -->
+  <!-- Манифест пакета air_ground_bringup                            -->
+  <!-- Проект: Air-Ground Security System — MVP                      -->
+  <!-- Фаза 1: Контроль воздушного пространства                      -->
+  <!-- ============================================================ -->
+
+  <name>air_ground_bringup</name>
+  <version>0.1.0</version>
+  <description>
+    Пакет запуска системы охраны воздушного пространства (Фаза 1 MVP).
+    Содержит узлы управления дроном, планирования воздушного патруля,
+    детекции чужих БПЛА, мониторинга батареи и уведомления владельца.
+  </description>
+
+  <!-- Автор и сопровождающий -->
+  <maintainer email="gibrin@users.noreply.github.com">Gibrin</maintainer>
+  <author email="gibrin@users.noreply.github.com">Gibrin</author>
+
+  <!-- Лицензия -->
+  <license>MIT</license>
+
+  <!-- URL проекта -->
+  <url type="website">https://github.com/Gibrin/air-ground-security-mvp</url>
+  <url type="repository">https://github.com/Gibrin/air-ground-security-mvp</url>
+  <url type="bugtracker">https://github.com/Gibrin/air-ground-security-mvp/issues</url>
+
+  <!-- ============================================================ -->
+  <!-- Инструмент сборки                                             -->
+  <!-- ============================================================ -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- ============================================================ -->
+  <!-- Зависимости времени сборки (для компиляции)                   -->
+  <!-- Для Python-узлов достаточно только исполняемых зависимостей   -->
+  <!-- ============================================================ -->
+
+  <!-- ============================================================ -->
+  <!-- Зависимости времени выполнения (для запуска узлов)            -->
+  <!-- ============================================================ -->
+
+  <!-- Ядро ROS -->
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>roslaunch</exec_depend>
+
+  <!-- Стандартные типы сообщений -->
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>diagnostic_msgs</exec_depend>
+
+  <!-- Трансформации -->
+  <exec_depend>tf2</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+
+  <!-- Визуализация (требуется по заданию курсовой) -->
+  <exec_depend>rviz</exec_depend>
+  <exec_depend>rqt</exec_depend>
+  <exec_depend>rqt_common_plugins</exec_depend>
+  <exec_depend>rqt_gui</exec_depend>
+  <exec_depend>rqt_gui_py</exec_depend>
+  <exec_depend>rqt_plot</exec_depend>
+  <exec_depend>rqt_console</exec_depend>
+  <exec_depend>rqt_topic</exec_depend>
+
+  <!-- Подключаемые устройства (требуется по заданию курсовой) -->
+  <!-- Батарея ноутбука (через /sys/class/power_supply/BAT0) -->
+  <exec_depend>sensor_msgs</exec_depend>
+
+  <!-- Джойстик (для тестов и управления) -->
+  <exec_depend>joy</exec_depend>
+
+  <!-- Веб-камера (для тестов) -->
+  <exec_depend>usb_cam</exec_depend>
+  <exec_depend>v4l2_camera</exec_depend>
+  <exec_depend>image_transport</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+
+  <!-- MAVROS (для управления дроном в будущих фазах) -->
+  <exec_depend>mavros</exec_depend>
+  <exec_depend>mavros_extras</exec_depend>
+  <exec_depend>mavlink</exec_depend>
+
+  <!-- Симуляция в Gazebo -->
+  <exec_depend>gazebo_ros</exec_depend>
+
+  <!-- Утилиты для моделей робота -->
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>urdf</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+
+  <!-- ============================================================ -->
+  <!-- Экспорт плагинов (не требуется для данного пакета)            -->
+  <!-- ============================================================ -->
+  <!--
+  <export>
+  </export>
+  -->
+
+</package>
