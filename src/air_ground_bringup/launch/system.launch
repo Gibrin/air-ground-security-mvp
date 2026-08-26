@@ -1,0 +1,203 @@
+<?xml version="1.0"?>
+<!-- ============================================================ -->
+<!-- system.launch                                                 -->
+<!-- Главный launch-файл системы охраны воздушного пространства    -->
+<!-- Проект: Air-Ground Security System — MVP (Фаза 1)             -->
+<!-- ============================================================ -->
+<!--                                                               -->
+<!-- Запуск системы:                                               -->
+<!--   roslaunch air_ground_bringup system.launch                  -->
+<!--                                                               -->
+<!-- Запуск с визуализацией в RViz:                                -->
+<!--   roslaunch air_ground_bringup system.launch rviz:=true       -->
+<!--                                                               -->
+<!-- Запуск с визуализацией в RQT:                                 -->
+<!--   roslaunch air_ground_bringup system.launch rqt:=true        -->
+<!--                                                               -->
+<!-- Запуск со всей визуализацией:                                 -->
+<!--   roslaunch air_ground_bringup system.launch rviz:=true rqt:=true -->
+<!--                                                               -->
+<!-- ============================================================ -->
+
+<launch>
+
+  <!-- ============================================================ -->
+  <!-- АРГУМЕНТЫ ЗАПУСКА                                             -->
+  <!-- ============================================================ -->
+
+  <!-- Визуализация (требуется по заданию курсовой) -->
+  <arg name="rviz" default="false" doc="Запустить RViz для визуализации"/>
+  <arg name="rqt" default="false" doc="Запустить RQT для мониторинга топиков"/>
+
+  <!-- Режимы симуляции (Фаза 1) -->
+  <arg name="simulate_intruder" default="true" doc="Запустить симулятор чужого БПЛА"/>
+  <arg name="auto_detect_intruder" default="false" doc="Автоматическая детекция нарушителя"/>
+  <arg name="intruder_behavior" default="linear" doc="Поведение нарушителя: linear, circle, hover"/>
+
+  <!-- Параметры патрулирования -->
+  <arg name="patrol_radius" default="50.0" doc="Радиус воздушного патруля (м)"/>
+  <arg name="patrol_altitude" default="10.0" doc="Высота воздушного патруля (м)"/>
+  <arg name="num_waypoints" default="8" doc="Количество точек в маршруте патруля"/>
+
+  <!-- Параметры управления дроном -->
+  <arg name="target_altitude" default="10.0" doc="Целевая высота для взлёта (м)"/>
+  <arg name="intercept_distance" default="2.0" doc="Дистанция успешного перехвата (м)"/>
+
+  <!-- Параметры мониторинга -->
+  <arg name="enable_battery_monitor" default="true" doc="Включить мониторинг батареи"/>
+  <arg name="critical_battery_level" default="10.0" doc="Критический уровень батареи (%)"/>
+
+  <!-- ============================================================ -->
+  <!-- ГЛОБАЛЬНЫЕ ПАРАМЕТРЫ                                          -->
+  <!-- ============================================================ -->
+
+  <param name="robot_name" value="air_ground_security_mvp"/>
+  <param name="robot_phase" value="phase_1"/>
+  <param name="mission_type" value="air_space_control"/>
+
+  <!-- ============================================================ -->
+  <!-- ПАРАМЕТРЫ ДЛЯ УЗЛОВ                                           -->
+  <!-- ============================================================ -->
+
+  <!-- Параметры drone_controller -->
+  <rosparam ns="drone_controller">
+    target_altitude: $(arg target_altitude)
+    intercept_distance: $(arg intercept_distance)
+    altitude_tolerance: 0.5
+    landing_tolerance: 0.1
+    critical_battery: $(arg critical_battery_level)
+  </rosparam>
+
+  <!-- Параметры air_patrol_planner -->
+  <rosparam ns="air_patrol_planner">
+    patrol_radius: $(arg patrol_radius)
+    patrol_altitude: $(arg patrol_altitude)
+    num_waypoints: $(arg num_waypoints)
+    waypoint_tolerance: 3.0
+    center_x: 0.0
+    center_y: 0.0
+  </rosparam>
+
+  <!-- Параметры intruder_detector -->
+  <rosparam ns="intruder_detector">
+    simulation_enabled: $(arg auto_detect_intruder)
+    detection_probability: 0.1
+    check_interval: 2.0
+    intruder_radius_min: 30.0
+    intruder_radius_max: 70.0
+    intruder_altitude_min: 5.0
+    intruder_altitude_max: 20.0
+    center_x: 0.0
+    center_y: 0.0
+    alert_duration: 2.0
+  </rosparam>
+
+  <!-- Параметры intruder_simulator -->
+  <rosparam ns="intruder_simulator">
+    behavior: $(arg intruder_behavior)
+    speed: 5.0
+    update_rate: 10.0
+    start_x: 100.0
+    start_y: 0.0
+    start_z: 15.0
+    target_x: 0.0
+    target_y: 0.0
+    target_z: 15.0
+    circle_radius: 40.0
+    circle_altitude: 15.0
+    auto_trigger_detector: true
+  </rosparam>
+
+  <!-- ============================================================ -->
+  <!-- УЗЛЫ УПРАВЛЕНИЯ ДРОНОМ (ЯДРО ФАЗЫ 1)                          -->
+  <!-- ============================================================ -->
+
+  <!-- Конечный автомат управления дроном -->
+  <node name="drone_controller"
+        pkg="air_ground_bringup"
+        type="drone_controller.py"
+        output="screen"
+        respawn="false"/>
+
+  <!-- Планировщик воздушного патруля -->
+  <node name="air_patrol_planner"
+        pkg="air_ground_bringup"
+        type="air_patrol_planner.py"
+        output="screen"
+        respawn="false"/>
+
+  <!-- Детектор чужих БПЛА (симуляция в Фазе 1) -->
+  <node name="intruder_detector"
+        pkg="air_ground_bringup"
+        type="intruder_detector.py"
+        output="screen"
+        respawn="false"/>
+
+  <!-- Симулятор чужого БПЛА (только если включён) -->
+  <node name="intruder_simulator"
+        pkg="air_ground_bringup"
+        type="intruder_simulator.py"
+        output="screen"
+        respawn="false"
+        if="$(arg simulate_intruder)"/>
+
+  <!-- ============================================================ -->
+  <!-- УЗЛЫ МОНИТОРИНГА                                              -->
+  <!-- ============================================================ -->
+
+  <!-- Мониторинг батареи ноутбука (реальное устройство) -->
+  <node name="battery_node"
+        pkg="air_ground_bringup"
+        type="battery_node.py"
+        output="screen"
+        respawn="false"
+        if="$(arg enable_battery_monitor)"/>
+
+  <!-- Симулятор PIR-датчика (для Фазы 2, пока закомментирован) -->
+  <!--
+  <node name="pir_simulator_node"
+        pkg="air_ground_bringup"
+        type="pir_simulator_node.py"
+        output="screen"
+        respawn="false"/>
+  -->
+
+  <!-- Узел уведомлений в Telegram (заглушка Фазы 1) -->
+  <!--
+  <node name="telegram_alert_node"
+        pkg="air_ground_bringup"
+        type="telegram_alert_node.py"
+        output="screen"
+        respawn="false"/>
+  -->
+
+  <!-- ============================================================ -->
+  <!-- ВИЗУАЛИЗАЦИЯ (по параметру, требуется по заданию)             -->
+  <!-- ============================================================ -->
+
+  <!-- RViz с предустановленной конфигурацией -->
+  <node name="rviz"
+        pkg="rviz"
+        type="rviz"
+        args="-d $(find air_ground_bringup)/config/default.rviz"
+        output="screen"
+        if="$(arg rviz)"/>
+
+  <!-- RQT для мониторинга топиков и графиков -->
+  <node name="rqt_gui"
+        pkg="rqt_gui"
+        type="rqt_gui"
+        output="screen"
+        if="$(arg rqt)"/>
+
+  <!-- ============================================================ -->
+  <!-- ЛОГИРОВАНИЕ ЗАПУСКА                                           -->
+  <!-- ============================================================ -->
+
+  <node name="launch_logger"
+        pkg="rostopic"
+        type="rostopic"
+        args="pub --once /launch/status std_msgs/String 'data: Air-Ground Security MVP Phase 1 launched'"
+        output="log"/>
+
+</launch>
