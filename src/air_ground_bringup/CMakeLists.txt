@@ -34,6 +34,7 @@ catkin_install_python(PROGRAMS
   scripts/battery_node.py
   scripts/pir_simulator_node.py
   scripts/drone_controller.py
+  scripts/drone_simulator.py
   scripts/air_patrol_planner.py
   scripts/intruder_detector.py
   scripts/intruder_simulator.py

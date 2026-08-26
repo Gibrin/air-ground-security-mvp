@@ -31,6 +31,7 @@
 
   <!-- Режимы симуляции (Фаза 1) -->
   <arg name="simulate_intruder" default="true" doc="Запустить симулятор чужого БПЛА"/>
+  <arg name="simulate_drone" default="true" doc="Запустить симулятор дрона (публикация позиции)"/>
   <arg name="auto_detect_intruder" default="false" doc="Автоматическая детекция нарушителя"/>
   <arg name="intruder_behavior" default="linear" doc="Поведение нарушителя: linear, circle, hover"/>
 
@@ -42,6 +43,9 @@
   <!-- Параметры управления дроном -->
   <arg name="target_altitude" default="10.0" doc="Целевая высота для взлёта (м)"/>
   <arg name="intercept_distance" default="2.0" doc="Дистанция успешного перехвата (м)"/>
+
+  <!-- Параметры симулятора дрона -->
+  <arg name="drone_max_speed" default="5.0" doc="Максимальная скорость симулятора дрона (м/с)"/>
 
   <!-- Параметры мониторинга -->
   <arg name="enable_battery_monitor" default="true" doc="Включить мониторинг батареи"/>
@@ -58,6 +62,16 @@
   <!-- ============================================================ -->
   <!-- ПАРАМЕТРЫ ДЛЯ УЗЛОВ                                           -->
   <!-- ============================================================ -->
+
+  <!-- Параметры drone_simulator -->
+  <rosparam ns="drone_simulator">
+    max_speed: $(arg drone_max_speed)
+    update_rate: 20.0
+    position_tolerance: 0.1
+    start_x: 0.0
+    start_y: 0.0
+    start_z: 0.0
+  </rosparam>
 
   <!-- Параметры drone_controller -->
   <rosparam ns="drone_controller">
@@ -107,6 +121,19 @@
     circle_altitude: 15.0
     auto_trigger_detector: true
   </rosparam>
+
+  <!-- ============================================================ -->
+  <!-- УЗЛЫ СИМУЛЯЦИИ (ФАЗА 1)                                       -->
+  <!-- ============================================================ -->
+
+  <!-- Симулятор дрона (публикует /drone/position, Фаза 1) -->
+  <!-- В Фазе 2 заменяется реальным драйвером дрона (mavros + PX4) -->
+  <node name="drone_simulator"
+        pkg="air_ground_bringup"
+        type="drone_simulator.py"
+        output="screen"
+        respawn="false"
+        if="$(arg simulate_drone)"/>
 
   <!-- ============================================================ -->
   <!-- УЗЛЫ УПРАВЛЕНИЯ ДРОНОМ (ЯДРО ФАЗЫ 1)                          -->
