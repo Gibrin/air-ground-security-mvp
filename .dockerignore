@@ -3,7 +3,7 @@
 # Исключения при копировании контекста в Docker-образ
 # ============================================================
 
-# Артефакты сборки рабочего пространства
+# Артефакты сборки рабочего пространства (важно!)
 build/
 devel/
 install/
@@ -19,7 +19,7 @@ logs/
 __pycache__/
 *.egg-info/
 
-# Логи
+# Логи ROS
 *.log
 .roslaunch/
 .rosinstall
@@ -41,15 +41,14 @@ venv/
 *.docx
 *.pdf
 
-# Docker файлы (не нужно копировать их сами в образ)
-docker/
+# Docker файлы (САМИ Dockerfile и .dockerignore исключаются,
+# но папка docker/ с entrypoint.sh и sshd_config ДОЛЖНА остаться)
 Dockerfile
 .dockerignore
+docker/Dockerfile
+docker/.dockerignore
 
 # Временные файлы
 .tmp/
 temp/
 *.bak
-
-# Скриншоты проверки
-rviz&rqt.png

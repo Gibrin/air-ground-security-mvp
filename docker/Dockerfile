@@ -56,7 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
     && rm -rf /var/lib/apt/lists/*
 
 # ============================================================
-# Установка ROS-пакетов для проекта (с retry)
+# Установка ROS-пакетов для проекта
 # ============================================================
 RUN apt-get update \
     && (apt-get install -y --no-install-recommends --fix-missing \
@@ -80,6 +80,12 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # ============================================================
+# Инициализация rosdep (не критично для сборки)
+# ============================================================
+RUN (rosdep init 2>/dev/null || true) \
+    && (rosdep update 2>/dev/null || echo "rosdep update skipped due to network issues")
+
+# ============================================================
 # Настройка SSH-сервера
 # ============================================================
 RUN mkdir -p /var/run/sshd \
@@ -101,24 +107,20 @@ RUN useradd -m -s /bin/bash robot \
 RUN mkdir -p ${CATKIN_WS}/src
 
 # ============================================================
-# Копирование исходного кода
+# Копирование пакета напрямую в src/
 # ============================================================
-COPY . ${CATKIN_WS}/src/air_ground_project/
+COPY src/air_ground_bringup ${CATKIN_WS}/src/air_ground_bringup/
 
 # ============================================================
-# Перемещение пакета в правильную структуру
+# Копирование скриптов установки для справки
 # ============================================================
-RUN mkdir -p ${CATKIN_WS}/src/air_ground_bringup \
-    && cp -r ${CATKIN_WS}/src/air_ground_project/src/air_ground_bringup/* \
-       ${CATKIN_WS}/src/air_ground_bringup/ \
-    || true
+RUN mkdir -p /opt/robot_scripts
+COPY scripts /opt/robot_scripts/
 
 # ============================================================
-# Инициализация rosdep и установка зависимостей
+# Установка зависимостей пакета через rosdep (не критично)
 # ============================================================
-RUN rosdep init 2>/dev/null || true \
-    && rosdep update \
-    && (rosdep install --from-paths ${CATKIN_WS}/src --ignore-src -r -y || true)
+RUN (rosdep install --from-paths ${CATKIN_WS}/src --ignore-src -r -y || true)
 
 # ============================================================
 # Сборка рабочего пространства
@@ -136,7 +138,7 @@ RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /root/.bashrc \
     && echo "source ${CATKIN_WS}/devel/setup.bash" >> /home/robot/.bashrc
 
 # ============================================================
-# Копирование конфигурационных файлов
+# Копирование конфигурационных файлов Docker
 # ============================================================
 COPY docker/entrypoint.sh /entrypoint.sh
 COPY docker/ssh/sshd_config /etc/ssh/sshd_config
