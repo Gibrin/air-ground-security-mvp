@@ -1,37 +1,36 @@
 # ============================================================
 # Dockerfile для проекта Air-Ground Security System — MVP
 # ============================================================
-# Базовый образ: ROS 1 Noetic на Ubuntu 20.04
-# Включает:
-#   - ROS Noetic Desktop-Full
-#   - Все зависимости проекта
-#   - Доступ по SSH
-#   - Исходный код рабочего пространства
-# ============================================================
-
 FROM ros:noetic-ros-base
 
-# ============================================================
-# Метаданные образа
-# ============================================================
 LABEL maintainer="Gibrin <gibrin@users.noreply.github.com>"
 LABEL description="Air-Ground Security System MVP - Phase 1"
 LABEL version="1.0"
 
-# ============================================================
-# Переменные окружения
-# ============================================================
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ROS_DISTRO=noetic
 ENV CATKIN_WS=/root/catkin_ws
 ENV SHELL=/bin/bash
 
 # ============================================================
-# Установка базовых зависимостей
+# Добавление стабильного репозитория ROS
 # ============================================================
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
+    gnupg \
     curl \
+    lsb-release \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc \
+       | gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros/ubuntu $(lsb_release -cs) main" \
+       > /etc/apt/sources.list.d/ros-latest.list
+
+# ============================================================
+# Установка базовых зависимостей
+# ============================================================
+RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
+    git \
     wget \
     build-essential \
     cmake \
@@ -57,25 +56,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ============================================================
-# Установка ROS-пакетов для проекта
+# Установка ROS-пакетов для проекта (с retry)
 # ============================================================
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ros-noetic-rviz \
-    ros-noetic-rqt \
-    ros-noetic-rqt-common-plugins \
-    ros-noetic-rqt-gui \
-    ros-noetic-rqt-gui-py \
-    ros-noetic-rqt-plot \
-    ros-noetic-rqt-console \
-    ros-noetic-rqt-topic \
-    ros-noetic-joy \
-    ros-noetic-usb-cam \
-    ros-noetic-tf2 \
-    ros-noetic-tf2-ros \
-    ros-noetic-mavros \
-    ros-noetic-mavros-extras \
-    ros-noetic-xacro \
-    ros-noetic-robot-state-publisher \
+RUN apt-get update \
+    && (apt-get install -y --no-install-recommends --fix-missing \
+        ros-noetic-rviz \
+        ros-noetic-rqt \
+        ros-noetic-rqt-common-plugins \
+        ros-noetic-rqt-gui \
+        ros-noetic-rqt-gui-py \
+        ros-noetic-rqt-plot \
+        ros-noetic-rqt-console \
+        ros-noetic-rqt-topic \
+        ros-noetic-joy \
+        ros-noetic-usb-cam \
+        ros-noetic-tf2 \
+        ros-noetic-tf2-ros \
+        ros-noetic-mavros \
+        ros-noetic-mavros-extras \
+        ros-noetic-xacro \
+        ros-noetic-robot-state-publisher \
+    || apt-get install -y -f) \
     && rm -rf /var/lib/apt/lists/*
 
 # ============================================================
@@ -87,7 +88,7 @@ RUN mkdir -p /var/run/sshd \
     && sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
 
 # ============================================================
-# Создание пользователя для работы (опционально, для безопасности)
+# Создание пользователя robot
 # ============================================================
 RUN useradd -m -s /bin/bash robot \
     && echo "robot:robot" | chpasswd \
@@ -100,14 +101,12 @@ RUN useradd -m -s /bin/bash robot \
 RUN mkdir -p ${CATKIN_WS}/src
 
 # ============================================================
-# Копирование исходного кода проекта
+# Копирование исходного кода
 # ============================================================
-# Предполагается, что сборка запускается из корня репозитория
-# и папка с проектом доступна как контекст сборки
 COPY . ${CATKIN_WS}/src/air_ground_project/
 
 # ============================================================
-# Перемещение пакета в правильную структуру рабочего пространства
+# Перемещение пакета в правильную структуру
 # ============================================================
 RUN mkdir -p ${CATKIN_WS}/src/air_ground_bringup \
     && cp -r ${CATKIN_WS}/src/air_ground_project/src/air_ground_bringup/* \
@@ -119,8 +118,7 @@ RUN mkdir -p ${CATKIN_WS}/src/air_ground_bringup \
 # ============================================================
 RUN rosdep init 2>/dev/null || true \
     && rosdep update \
-    && rosdep install --from-paths ${CATKIN_WS}/src --ignore-src -r -y \
-    || true
+    && (rosdep install --from-paths ${CATKIN_WS}/src --ignore-src -r -y || true)
 
 # ============================================================
 # Сборка рабочего пространства
@@ -148,16 +146,10 @@ RUN chmod +x /entrypoint.sh \
 # ============================================================
 # Порты
 # ============================================================
-# 22 — SSH
-# 11311 — ROS Master
 EXPOSE 22 11311
 
 # ============================================================
 # Точка входа
 # ============================================================
 ENTRYPOINT ["/entrypoint.sh"]
-
-# ============================================================
-# Команда по умолчанию
-# ============================================================
 CMD ["bash"]
