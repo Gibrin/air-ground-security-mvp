@@ -1,0 +1,56 @@
+# ============================================================
+# Конфигурация SSH-сервера для Docker-контейнера
+# Проект: Air-Ground Security System — MVP
+# ============================================================
+
+# Основные настройки
+Port 22
+AddressFamily any
+ListenAddress 0.0.0.0
+Protocol 2
+
+# Хост-ключи (генерируются при первом запуске)
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+# Логирование
+SyslogFacility AUTH
+LogLevel INFO
+
+# Аутентификация
+LoginGraceTime 120
+PermitRootLogin yes
+StrictModes yes
+MaxAuthTries 3
+MaxSessions 10
+
+# Аутентификация по ключам
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+
+# Аутентификация по паролю (для курсовой работы)
+PasswordAuthentication yes
+PermitEmptyPasswords no
+ChallengeResponseAuthentication no
+
+# Отключение небезопасных методов
+HostbasedAuthentication no
+IgnoreRhosts yes
+PermitUserEnvironment no
+
+# Окружение
+X11Forwarding yes
+X11DisplayOffset 10
+PrintMotd no
+PrintLastLog yes
+TCPKeepAlive yes
+AcceptEnv LANG LC_*
+
+# Производительность
+ClientAliveInterval 300
+ClientAliveCountMax 2
+
+# Подсистемы
+UsePAM yes
+Subsystem sftp /usr/lib/openssh/sftp-server
